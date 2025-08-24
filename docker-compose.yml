@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # MongoDB データベース
+  mongodb:
+    image: mongo:5.0
+    container_name: MemoFlow-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: MemoFlow
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - MemoFlow-network
+
+  # Node.js バックエンド API
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: MemoFlow-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/MemoFlow?authSource=admin
+      PORT: 8000
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    networks:
+      - MemoFlow-network
+
+  # Next.js フロントエンド
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: MemoFlow-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - MemoFlow-network
+
+  # nginx リバースプロキシ
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: MemoFlow-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - MemoFlow-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  MemoFlow-network:
+    driver: bridge
