@@ -2,13 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# アプリケーションファイルをコピー
-COPY . .
-
-# 依存関係をインストール
+COPY package*.json ./
 RUN npm install
 
-EXPOSE 8000
+COPY . .
 
-# 開発サーバー起動
+EXPOSE 5000
+
 CMD ["npm", "run", "dev"]
